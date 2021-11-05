@@ -1,0 +1,111 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "storageName": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 24,
+            "metadata": {
+                "description": "The name to use for the data lake"
+            }
+        },
+        "storageSku": {
+            "type": "string",
+            "defaultValue": "Standard_LRS",
+            "allowedValues": [
+                "Standard_LRS",
+                "Standard_ZRS",
+                "Standard_GRS",
+                "Standard_RAGRS"
+            ],
+            "metadata": {
+                "description": "The data redundancy type to use for the data lake store"
+            }
+        },
+        "storageAccessTier": {
+            "type": "String",
+            "defaultValue": "Hot",
+            "allowedValues": [
+                "Hot",
+                "Cool"
+            ],
+            "metadata": {
+                "description": "The access tier of blobs placed in the data lake store"
+            }
+        },
+        "storageCreateContainerDatamart": {
+            "type": "bool",
+            "defaultValue": "true",
+            "metadata": {
+                "description": "Whether or not to create the cns-datamart container"
+            }
+        },
+        "storageCreateContainerEmpire": {
+            "type": "bool",
+            "defaultValue": "true",
+            "metadata": {
+                "description": "Whether or not to create the empire container"
+            }
+        }
+    },
+    "variables": {
+        "storageApiVersion": "2021-02-01"
+    },
+    "resources": [
+        {
+            "type": "Microsoft.Storage/storageAccounts",
+            "apiVersion": "[variables('storageApiVersion')]",
+            "name": "[parameters('storageName')]",
+            "location": "[resourceGroup().location]",
+            "sku": {
+                "name": "[parameters('storageSku')]"
+            },
+            "kind": "StorageV2",
+            "properties": {
+                "networkAcls": {
+                    "resourceAccessRules": [],
+                    "bypass": "AzureServices",
+                    "virtualNetworkRules": [],
+                    "ipRules": [],
+                    "defaultAction": "Allow"
+                },
+                "accessTier": "[parameters('storageAccessTier')]",
+                "isHnsEnabled": true,
+                "minimumTlsVersion": "TLS1_2",
+                "encryption": {
+                    "requireInfrastructureEncryption": "true",
+                    "services": {
+                        "file": {
+                            "enabled": true
+                        },
+                        "blob": {
+                            "enabled": true
+                        }
+                    },
+                    "keySource": "Microsoft.Storage"
+                }
+            },
+            "resources": [
+                {
+                    "name": "[concat('default', '/', 'cns-datamart')]",
+                    "type": "blobServices/containers",
+                    "apiVersion": "[variables('storageApiVersion')]",
+                    "condition": "[parameters('storageCreateContainerDatamart')]",
+                    "dependsOn": [
+                        "[parameters('storageName')]"
+                    ]
+                },
+                {
+                    "name": "[concat('default', '/', 'empire')]",
+                    "type": "blobServices/containers",
+                    "apiVersion": "[variables('storageApiVersion')]",
+                    "condition": "[parameters('storageCreateContainerEmpire')]",
+                    "dependsOn": [
+                        "[parameters('storageName')]"
+                    ]
+                }
+            ]
+        }
+    ]
+}
